@@ -1,0 +1,4 @@
+name: pulumi-polkadot
+runtime: nodejs
+description: A TypeScript Pulumi program to manage polkadot/kusama validators on k8s
+  clusters.
