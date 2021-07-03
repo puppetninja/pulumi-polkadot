@@ -35,15 +35,16 @@ const midlContainerRegistry = {
 };
 
 // Create polkadot cluster on digitalocean.
-const polkadotCluster = new docluster.PolkadotCluster("midl-polkadot-cluster",
-    {
-        project: midlProject,
-        vpc: midlVPC,
-        k8s: midlKubernetes,
-        description: "Cluster on digitalocean to host polkadot/ksm validators."
-    });
+const polkadotCluster = new docluster.PolkadotCluster("midl-polkadot-cluster", {
+    project: midlProject,
+    vpc: midlVPC,
+    k8s: midlKubernetes,
+    registry: midlContainerRegistry,
+    description: "Cluster on digitalocean to host polkadot/ksm validators."
+});
 
 // Build docker containers and push to registry on DO
-
+const test = polkadotCluster.doProject;
 
 // Deploy helm charts on k8s cluster on DO
+// Declarations of validators.

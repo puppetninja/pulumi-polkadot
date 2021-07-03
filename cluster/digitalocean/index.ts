@@ -1,11 +1,13 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as digitalocean from "@pulumi/digitalocean";
+import { rootPulumiStackTypeName } from "@pulumi/pulumi/runtime";
 
 /* Params to create the cluster on DigitalOcean */
 export interface ClusterParameters {
     project: ClusterProject;
     vpc: ClusterVPC;
     k8s: ClusterKubernetes;
+    registry: ContainerRegistry;
     description: string;
 };
 
@@ -34,6 +36,11 @@ export interface ClusterKubernetes {
     nodePool: ClusterKubernetesNodes;
 };
 
+export interface ContainerRegistry {
+    name: string;
+    subscriptionTierSlug: string;
+};
+
 /*
  *  PolkadotCluster indicates a combination of resources on digital ocean to run polkadot validators.
  *  It contains the provisioning of following components:
@@ -47,8 +54,15 @@ export class PolkadotCluster extends pulumi.ComponentResource {
     readonly project: ClusterProject;
     readonly vpc: ClusterVPC;
     readonly k8s: ClusterKubernetes;
+    readonly registry: ContainerRegistry;
     readonly description: string;
+    // Provisioned resources refs on DigitalOcean
+    readonly doProject: digitalocean.Project;
+    readonly doVPC: digitalocean.Vpc;
+    readonly doK8s: digitalocean.KubernetesCluster;
+    readonly doRegistry: digitalocean.ContainerRegistry;
 
+    // constructor to provision resources on digitalocean
     constructor(name: string,
                 params: ClusterParameters,
                 opts?: pulumi.ResourceOptions ) {
@@ -62,10 +76,11 @@ export class PolkadotCluster extends pulumi.ComponentResource {
         this.project = params.project;
         this.vpc = params.vpc;
         this.k8s = params.k8s;
+        this.registry = params.registry;
         this.description = params.description;
         
         // project
-        const project = new digitalocean.Project(this.project.name, {
+        this.doProject = new digitalocean.Project(this.project.name, {
             name: this.project.name,
             description: this.project.description,
             environment: this.project.environment,
@@ -73,26 +88,31 @@ export class PolkadotCluster extends pulumi.ComponentResource {
         });
 
         // vpc
-        const vpc = new digitalocean.Vpc(this.vpc.name, {
+        this.doVPC = new digitalocean.Vpc(this.vpc.name, {
             name: this.vpc.name,
             region: this.vpc.region,
         });
 
-        // k8s
-        const k8s = new digitalocean.KubernetesCluster(this.k8s.name, {
+        // k8s cluster
+        this.doK8s = new digitalocean.KubernetesCluster(this.k8s.name, {
             name: this.k8s.name,
             region: this.k8s.region,
             version: this.k8s.version,
             nodePool: this.k8s.nodePool,
-            vpcUuid: vpc.id,
+            vpcUuid: this.doVPC.id,
         });
 
-        const projectResourcesName = this.project.name + "-resouces";
+        // container registry
+        this.doRegistry = new digitalocean.ContainerRegistry(this.registry.name, {
+            name: this.registry.name,
+            subscriptionTierSlug: this.registry.subscriptionTierSlug,
+        });
+
         // Create project resources
+        const projectResourcesName = this.project.name + "-resouces";
         const projectResources = new digitalocean.ProjectResources(projectResourcesName, {
-            project: project.id,
-            resources:[k8s.clusterUrn],
+            project: this.doProject.id,
+            resources:[this.doK8s.clusterUrn],
         });
     }
-
 };
