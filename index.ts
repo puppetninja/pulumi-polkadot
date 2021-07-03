@@ -1,5 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as docker from "@pulumi/docker";
+import * as digitalocean from "@pulumi/digitalocean";
 
 import * as docluster from "./cluster/digitalocean";
 
@@ -44,7 +45,43 @@ const polkadotCluster = new docluster.PolkadotCluster("midl-polkadot-cluster", {
 });
 
 // Build docker containers and push to registry on DO
-const test = polkadotCluster.doProject;
+const registryCreds = new digitalocean.ContainerRegistryDockerCredentials(`${midlContainerRegistry.name}-creds`, {
+    registryName: midlContainerRegistry.name,
+    write: true,
+});
+
+const registryInfo = pulumi.all(
+    [registryCreds.dockerCredentials, polkadotCluster.doRegistry.serverUrl]
+).apply(([authJson, serverUrl]) => {
+    // We are given a Docker creds file; parse it to find the temp username/password.
+    const auths = JSON.parse(authJson);
+    const authToken = auths["auths"][serverUrl]["auth"];
+    const decoded = Buffer.from(authToken, "base64").toString();
+    const [username, password] = decoded.split(":");
+    if (!password || !username) {
+        throw new Error("Invalid credentials");
+    }
+    return {
+        server: serverUrl,
+        username: username,
+        password: password,
+    };
+});
+
+const archiveDownloaderImageName = polkadotCluster.doRegistry.endpoint.apply(s => `${s}/polkadot-archive-downloader`);
+const nodeKeyConfiguratorImageName = polkadotCluster.doRegistry.endpoint.apply(s => `${s}/polkadot-node-key-configurator`);
+
+const archiveDownloaderImage = new docker.Image("polkadot-archive-downloader-img", {
+    imageName: archiveDownloaderImageName,
+    build: "polkadot-archive-downloader",
+    registry: registryInfo,
+});
+
+const nodeKeyConfiguratorImage = new docker.Image("polkadot-node-key-configurator-img", {
+    imageName: nodeKeyConfiguratorImageName,
+    build: "polkadot-node-key-configurator",
+    registry: registryInfo,
+});
 
 // Deploy helm charts on k8s cluster on DO
 // Declarations of validators.
