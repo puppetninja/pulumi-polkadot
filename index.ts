@@ -115,6 +115,7 @@ const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-va
                 "polkadot_archive_downloader": archiveDownloaderImageName,
                 "polkadot_node_key_configurator": nodeKeyConfiguratorImageName,
             },
+            "chain": "kusama",
             "polkadot_validator_name": "midl-polkadot-test-validtor",
             "p2p_ip": lbIP,
         },
