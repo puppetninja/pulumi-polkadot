@@ -107,24 +107,7 @@ const kubecluster = polkadotCluster.doK8s;
 const kubeconfig = kubecluster.kubeConfigs[0].rawConfig;
 const provider = new kubernetes.Provider("do-k8s", { kubeconfig });
 
-// const appLabels = { "app": "app-nginx" };
-// const app = new kubernetes.apps.v1.Deployment("do-app-dep", {
-//     spec: {
-//         selector: { matchLabels: appLabels },
-//         replicas: 5,
-//         template: {
-//             metadata: { labels: appLabels },
-//             spec: {
-//                 containers: [{
-//                     name: "nginx",
-//                     image: "nginx",
-//                 }],
-//             },
-//         },
-//     },
-// }, { provider });
-// 
-
+// Polkadot validators
 const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-validtor", {
         path: "./charts/polkadot/",
         values: {
