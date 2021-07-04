@@ -1,6 +1,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as docker from "@pulumi/docker";
 import * as digitalocean from "@pulumi/digitalocean";
+import * as kubernetes from "@pulumi/kubernetes";
 
 import * as docluster from "./cluster/digitalocean";
 
@@ -98,3 +99,40 @@ const nodeKeyConfiguratorImage = new docker.Image("polkadot-node-key-configurato
 
 // Deploy helm charts on k8s cluster on DO
 // Declarations of validators.
+// Get Loadbalancer ip
+const lb = polkadotCluster.doLoadBalancer;
+const lbIP = lb.ip;
+// Get k8s config
+const kubecluster = polkadotCluster.doK8s;
+const kubeconfig = kubecluster.kubeConfigs[0].rawConfig;
+const provider = new kubernetes.Provider("do-k8s", { kubeconfig });
+
+// const appLabels = { "app": "app-nginx" };
+// const app = new kubernetes.apps.v1.Deployment("do-app-dep", {
+//     spec: {
+//         selector: { matchLabels: appLabels },
+//         replicas: 5,
+//         template: {
+//             metadata: { labels: appLabels },
+//             spec: {
+//                 containers: [{
+//                     name: "nginx",
+//                     image: "nginx",
+//                 }],
+//             },
+//         },
+//     },
+// }, { provider });
+// 
+
+const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-validtor", {
+        path: "./charts/polkadot/",
+        values: {
+            "polkadot_k8s_images":{
+                "polkadot_archive_downloader": archiveDownloaderImageName,
+                "polkadot_node_key_configurator": nodeKeyConfiguratorImageName,
+            },
+            "polkadot_validator_name": "midl-polkadot-test-validtor",
+            "p2p_ip": lbIP,
+        },
+    },{ provider: provider });
