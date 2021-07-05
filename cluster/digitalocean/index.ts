@@ -134,6 +134,6 @@ export class MIDLCluster extends pulumi.ComponentResource {
                 this.doK8s.clusterUrn,
                 this.doLoadBalancer.loadBalancerUrn,
             ],
-        }, { dependsOn: [this.doK8s, this.doLoadBalancer] });
+        },{ dependsOn: [this.doK8s, this.doLoadBalancer] });
     }
 };
