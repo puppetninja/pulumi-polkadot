@@ -16,7 +16,7 @@ number_of_out_peers: 10
 
 number_of_in_peers: 10
 
-chain: polkadot
+chain: kusama
 
 # list of peers to always connect to. could be polkadot nodes in different namespaces
 # should be a list of key-value pairs with the key as namespace name and the value as private network key

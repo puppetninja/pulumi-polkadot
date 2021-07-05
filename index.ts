@@ -37,7 +37,7 @@ const midlKubernetes = {
         name: "midl-polkadot-nodes",
         // size could be found via do url:
         // https://cloud.digitalocean.com/kubernetes/clusters/new?i=xxxx&nodePools=s-4vcpu-8gb:1&clusterVersion=1.21.2-do.2&region=nyc1
-        size: "s-2vcpu-4gb",
+        size: "s-4vcpu-8gb",
         nodeCount: 1,
     },
 };
@@ -115,6 +115,7 @@ const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-va
                 "polkadot_archive_downloader": archiveDownloaderImageName,
                 "polkadot_node_key_configurator": nodeKeyConfiguratorImageName,
             },
+            "polkadot_archive_url": "https://ksm-rocksdb.polkashots.io/snapshot",
             "chain": "kusama",
             "polkadot_validator_name": "midl-polkadot-test-validtor",
             "p2p_ip": lbIP,

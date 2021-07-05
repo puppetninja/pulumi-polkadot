@@ -71,6 +71,9 @@ spec:
               name: polkadot-configmap
               key: ARCHIVE_URL
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 2
       volumes:
       - name: polkadot-node-keys
         secret:

@@ -103,6 +103,12 @@ export class MIDLCluster extends pulumi.ComponentResource {
             region: this.vpc.region,
         });
 
+        // container registry
+        this.doRegistry = new digitalocean.ContainerRegistry(this.registry.name, {
+            name: this.registry.name,
+            subscriptionTierSlug: this.registry.subscriptionTierSlug,
+        });
+
         // k8s cluster created within cluster VPC.
         this.doK8s = new digitalocean.KubernetesCluster(this.k8s.name, {
             name: this.k8s.name,
@@ -110,6 +116,8 @@ export class MIDLCluster extends pulumi.ComponentResource {
             version: this.k8s.version,
             nodePool: this.k8s.nodePool,
             vpcUuid: this.doVPC.id,
+        },{
+            dependsOn: [this.doVPC, this.doRegistry],
         });
 
         // loadbalancer
@@ -118,12 +126,8 @@ export class MIDLCluster extends pulumi.ComponentResource {
             forwardingRules: this.lb.forwardingRules,
             region: this.lb.region,
             vpcUuid: this.doVPC.id,
-        });
-
-        // container registry
-        this.doRegistry = new digitalocean.ContainerRegistry(this.registry.name, {
-            name: this.registry.name,
-            subscriptionTierSlug: this.registry.subscriptionTierSlug,
+        },{
+            dependsOn: [this.doVPC],
         });
 
         // Create project resources
@@ -134,6 +138,8 @@ export class MIDLCluster extends pulumi.ComponentResource {
                 this.doK8s.clusterUrn,
                 this.doLoadBalancer.loadBalancerUrn,
             ],
+        }, {
+            dependsOn: [this.doK8s, this.doLoadBalancer],
         });
     }
 };
