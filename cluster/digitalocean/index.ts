@@ -116,9 +116,7 @@ export class MIDLCluster extends pulumi.ComponentResource {
             version: this.k8s.version,
             nodePool: this.k8s.nodePool,
             vpcUuid: this.doVPC.id,
-        },{
-            dependsOn: [this.doVPC, this.doRegistry],
-        });
+        },{ dependsOn: [this.doVPC, this.doRegistry] });
 
         // loadbalancer
         this.doLoadBalancer = new digitalocean.LoadBalancer(this.lb.name, {
@@ -126,9 +124,7 @@ export class MIDLCluster extends pulumi.ComponentResource {
             forwardingRules: this.lb.forwardingRules,
             region: this.lb.region,
             vpcUuid: this.doVPC.id,
-        },{
-            dependsOn: [this.doVPC],
-        });
+        },{ dependsOn: [this.doVPC] });
 
         // Create project resources
         const projectResourcesName = this.project.name + "-resouces";
@@ -138,8 +134,6 @@ export class MIDLCluster extends pulumi.ComponentResource {
                 this.doK8s.clusterUrn,
                 this.doLoadBalancer.loadBalancerUrn,
             ],
-        }, {
-            dependsOn: [this.doK8s, this.doLoadBalancer],
-        });
+        }, { dependsOn: [this.doK8s, this.doLoadBalancer] });
     }
 };
