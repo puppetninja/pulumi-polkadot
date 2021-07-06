@@ -108,6 +108,12 @@ const kubeconfig = kubecluster.kubeConfigs[0].rawConfig;
 const provider = new kubernetes.Provider("do-k8s", { kubeconfig });
 
 // Polkadot validators
+const testValidatorNamespace = new kubernetes.core.v1.Namespace("test-validator-ns", {
+    metadata: {
+        name: "test-validator-ns",
+    },
+});
+
 const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-validtor", {
         path: "./charts/polkadot/",
         values: {
@@ -123,4 +129,8 @@ const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-va
             "polkadot_validator_name": "midl-polkadot-test-validtor",
             "p2p_ip": lbIP,
         },
-    },{ provider: provider });
+        namespace: testValidatorNamespace.metadata.name,
+    },{
+        provider: provider,
+        dependsOn: [testValidatorNamespace],
+    });

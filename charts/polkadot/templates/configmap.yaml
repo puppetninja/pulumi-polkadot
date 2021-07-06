@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 data:
   ARCHIVE_URL: "{{ .Values.polkadot_archive_url }}"
