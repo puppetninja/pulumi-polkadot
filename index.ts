@@ -111,7 +111,10 @@ const provider = new kubernetes.Provider("do-k8s", { kubeconfig });
 const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-validtor", {
         path: "./charts/polkadot/",
         values: {
-            "polkadot_k8s_images":{
+            "images": {
+                "polkadot_node": "parity/polkadot:v0.9.7",
+            },
+            "polkadot_k8s_images": {
                 "polkadot_archive_downloader": archiveDownloaderImageName,
                 "polkadot_node_key_configurator": nodeKeyConfiguratorImageName,
             },
