@@ -16,3 +16,10 @@ Once you create a default VPC and get the registry set, run following to bring u
 pulumi config set digitalocean:token [YOUR DO TOKEN] --secret
 pulumi up
 ```
+
+we hit strange issues after pulumi config is set, and switch to do DO env variable it works again
+
+```sh
+export DIGITALOCEAN_TOKEN=[YOUR DO TOKEN]
+pulumi up
+```

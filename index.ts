@@ -60,9 +60,11 @@ const polkadotCluster = new docluster.MIDLCluster("midl-polkadot-cluster", {
 // Build docker containers and push to registry on DO
 const registry = polkadotCluster.doRegistry;
 const registryCreds = new digitalocean.ContainerRegistryDockerCredentials(`${midlContainerRegistry.name}-creds`, {
-    registryName: midlContainerRegistry.name,
-    write: true,
-});
+        registryName: midlContainerRegistry.name,
+        write: true,
+    }, {
+        dependsOn: [registry]
+    });
 
 const registryInfo = pulumi.all(
     [registryCreds.dockerCredentials, registry.serverUrl]
@@ -109,10 +111,12 @@ const provider = new kubernetes.Provider("do-k8s", { kubeconfig });
 
 // Polkadot validators
 const testValidatorNamespace = new kubernetes.core.v1.Namespace("test-validator-ns", {
-    metadata: {
-        name: "test-validator-ns",
-    },
-});
+        metadata: {
+            name: "test-validator-ns",
+        }
+    },{
+        dependsOn: [kubecluster]
+    });
 
 const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-validtor", {
         path: "./charts/polkadot/",
