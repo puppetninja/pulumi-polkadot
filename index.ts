@@ -111,30 +111,32 @@ const provider = new kubernetes.Provider("do-k8s", { kubeconfig });
 
 // Polkadot validators
 const testValidatorNamespace = new kubernetes.core.v1.Namespace("test-validator-ns", {
-        metadata: {
-            name: "test-validator-ns",
-        }
-    },{
-        dependsOn: [kubecluster]
-    });
+    metadata: {
+        name: "test-validator-ns",
+    }
+},{
+    provider: provider,
+    dependsOn: [provider, kubecluster]
+});
 
 const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-validtor", {
-        path: "./charts/polkadot/",
-        values: {
-            "images": {
-                "polkadot_node": "parity/polkadot:v0.9.7",
-            },
-            "polkadot_k8s_images": {
-                "polkadot_archive_downloader": archiveDownloaderImageName,
-                "polkadot_node_key_configurator": nodeKeyConfiguratorImageName,
-            },
-            "polkadot_archive_url": "https://ksm-rocksdb.polkashots.io/snapshot",
-            "chain": "kusama",
-            "polkadot_validator_name": "midl-polkadot-test-validtor",
-            "p2p_ip": lbIP,
+    path: "./charts/polkadot/",
+    values: {
+        "images": {
+            "polkadot_node": "parity/polkadot:v0.9.7",
         },
-        namespace: testValidatorNamespace.metadata.name,
-    },{
-        provider: provider,
-        dependsOn: [testValidatorNamespace],
-    });
+        "polkadot_k8s_images": {
+            "polkadot_archive_downloader": archiveDownloaderImageName,
+            "polkadot_node_key_configurator": nodeKeyConfiguratorImageName,
+        },
+        "polkadot_archive_url": "https://ksm-rocksdb.polkashots.io/snapshot",
+        "chain": "kusama",
+        "polkadot_validator_name": "midl-polkadot-test-validtor",
+        "p2p_ip": lbIP,
+    },
+    // Intetegrated registry 401 error with new created ns
+    // namespace: testValidatorNamespace.metadata.name,
+},{
+    provider: provider,
+    dependsOn: [testValidatorNamespace, provider, kubecluster],
+});

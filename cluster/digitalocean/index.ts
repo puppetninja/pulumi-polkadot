@@ -124,7 +124,8 @@ export class MIDLCluster extends pulumi.ComponentResource {
             forwardingRules: this.lb.forwardingRules,
             region: this.lb.region,
             vpcUuid: this.doVPC.id,
-        },{ dependsOn: [this.doVPC] });
+            dropletTag: "k8s:worker", // hardcoded k8s cluster nodes
+        },{ dependsOn: [this.doVPC, this.doK8s] });
 
         // Create project resources
         const projectResourcesName = this.project.name + "-resouces";
