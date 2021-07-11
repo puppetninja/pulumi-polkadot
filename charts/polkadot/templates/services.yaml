@@ -13,8 +13,9 @@ spec:
   - port: 9615
     name: metrics
   - port: {{ .Values.p2p_port }}
-    targetPort: {{ .Values.p2p_ip }}
+    targetPort: {{ .Values.p2p_port }}
+    nodePort: {{ .Values.p2p_port }}
     name: p2p-port
   selector:
     app: polkadot-node
-  type: LoadBalancer
+  type: NodePort
