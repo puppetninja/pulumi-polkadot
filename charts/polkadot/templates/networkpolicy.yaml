@@ -28,7 +28,7 @@ spec:
       protocol: TCP
   ingress:
   - ports:
-    - port: 30333
+    - port: {{ .Values.p2p_port }}
       protocol: TCP
   - ports:
     - port: 9615

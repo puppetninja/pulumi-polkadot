@@ -31,7 +31,7 @@ spec:
           name: dot-rpc-port
         - containerPort: 9615
           name: metrics
-        - containerPort: 30333
+        - containerPort: {{ .Values.p2p_port }}
           name: dot-p2p-port
         volumeMounts:
         - name: polkadot-node-pv-claim

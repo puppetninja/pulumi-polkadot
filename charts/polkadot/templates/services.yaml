@@ -12,6 +12,9 @@ spec:
     name: rpc
   - port: 9615
     name: metrics
+  - port: {{ .Values.p2p_port }}
+    targetPort: {{ .Values.p2p_ip }}
+    name: p2p-port
   selector:
     app: polkadot-node
-  clusterIP: None
+  type: LoadBalancer

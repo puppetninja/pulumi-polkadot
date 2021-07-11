@@ -2,4 +2,5 @@
 /node_modules/
 
 # ignore for now
+env.cfg
 Pulumi.dev.yaml

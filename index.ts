@@ -22,9 +22,9 @@ const midlLoadBalancer = {
     name: "midl-polakdot-lb",
     region: "ams3",
     forwardingRules: [{
-        entryPort: 30333,
+        entryPort: 31333,
         entryProtocol: "tcp",
-        targetPort: 30333,
+        targetPort: 31333,
         targetProtocol: "tcp",
     }],
 };
@@ -123,7 +123,7 @@ const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-va
     path: "./charts/polkadot/",
     values: {
         "images": {
-            "polkadot_node": "parity/polkadot:v0.9.7",
+            "polkadot_node": "parity/polkadot:v0.9.8",
         },
         "polkadot_k8s_images": {
             "polkadot_archive_downloader": archiveDownloaderImageName,
@@ -133,6 +133,7 @@ const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-va
         "chain": "kusama",
         "polkadot_validator_name": "midl-polkadot-test-validtor",
         "p2p_ip": lbIP,
+        "p2p_port": 31333
     },
     // Intetegrated registry 401 error with new created ns
     // namespace: testValidatorNamespace.metadata.name,

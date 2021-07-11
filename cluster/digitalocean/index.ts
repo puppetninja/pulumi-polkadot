@@ -125,6 +125,7 @@ export class MIDLCluster extends pulumi.ComponentResource {
             region: this.lb.region,
             vpcUuid: this.doVPC.id,
             dropletTag: "k8s:worker", // hardcoded k8s cluster nodes
+            algorithm: "least_connections",
         },{ dependsOn: [this.doVPC, this.doK8s] });
 
         // Create project resources
