@@ -8,7 +8,6 @@ export interface ClusterParameters {
     vpc: ClusterVPC;
     lb: ClusterLoadBalancer;
     k8s: ClusterKubernetes;
-    registry: ContainerRegistry;
     description: string;
 };
 
@@ -43,11 +42,6 @@ export interface ClusterKubernetes {
     nodePool: ClusterKubernetesNodes;
 };
 
-export interface ContainerRegistry {
-    name: string;
-    subscriptionTierSlug: string;
-};
-
 /*
  *  PolkadotCluster indicates a combination of resources on digital ocean to run polkadot validators.
  *  It contains the provisioning of following components:
@@ -62,14 +56,12 @@ export class MIDLCluster extends pulumi.ComponentResource {
     readonly vpc: ClusterVPC;
     readonly lb: ClusterLoadBalancer;
     readonly k8s: ClusterKubernetes;
-    readonly registry: ContainerRegistry;
     readonly description: string;
 
     // Provisioned resources on digitalocean
     readonly doVPC: digitalocean.Vpc;
     readonly doLoadBalancer: digitalocean.LoadBalancer;
     readonly doK8s: digitalocean.KubernetesCluster;
-    readonly doRegistry: digitalocean.ContainerRegistry;
 
     // constructor to provision resources on digitalocean
     constructor(name: string,
@@ -86,7 +78,6 @@ export class MIDLCluster extends pulumi.ComponentResource {
         this.vpc = params.vpc;
         this.lb = params.lb;
         this.k8s = params.k8s;
-        this.registry = params.registry;
         this.description = params.description;
         
         // project
@@ -103,12 +94,6 @@ export class MIDLCluster extends pulumi.ComponentResource {
             region: this.vpc.region,
         });
 
-        // container registry
-        this.doRegistry = new digitalocean.ContainerRegistry(this.registry.name, {
-            name: this.registry.name,
-            subscriptionTierSlug: this.registry.subscriptionTierSlug,
-        });
-
         // k8s cluster created within cluster VPC.
         this.doK8s = new digitalocean.KubernetesCluster(this.k8s.name, {
             name: this.k8s.name,
@@ -116,7 +101,7 @@ export class MIDLCluster extends pulumi.ComponentResource {
             version: this.k8s.version,
             nodePool: this.k8s.nodePool,
             vpcUuid: this.doVPC.id,
-        },{ dependsOn: [this.doVPC, this.doRegistry] });
+        },{ dependsOn: [this.doVPC] });
 
         // loadbalancer
         this.doLoadBalancer = new digitalocean.LoadBalancer(this.lb.name, {

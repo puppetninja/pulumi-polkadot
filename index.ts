@@ -42,61 +42,13 @@ const midlKubernetes = {
     },
 };
 
-const midlContainerRegistry = {
-    name: "midl-polkadot-registry",
-    subscriptionTierSlug: "basic",
-};
-
 // Create polkadot cluster on digitalocean.
 const polkadotCluster = new docluster.MIDLCluster("midl-polkadot-cluster", {
     project: midlProject,
     vpc: midlVPC,
     lb: midlLoadBalancer,
     k8s: midlKubernetes,
-    registry: midlContainerRegistry,
     description: "Cluster on digitalocean to host polkadot/ksm validators."
-});
-
-// Build docker containers and push to registry on DO
-const registry = polkadotCluster.doRegistry;
-const registryCreds = new digitalocean.ContainerRegistryDockerCredentials(`${midlContainerRegistry.name}-creds`, {
-        registryName: midlContainerRegistry.name,
-        write: true,
-    }, {
-        dependsOn: [registry]
-    });
-
-const registryInfo = pulumi.all(
-    [registryCreds.dockerCredentials, registry.serverUrl]
-).apply(([authJson, serverUrl]) => {
-    // We are given a Docker creds file; parse it to find the temp username/password.
-    const auths = JSON.parse(authJson);
-    const authToken = auths["auths"][serverUrl]["auth"];
-    const decoded = Buffer.from(authToken, "base64").toString();
-    const [username, password] = decoded.split(":");
-    if (!password || !username) {
-        throw new Error("Invalid credentials");
-    }
-    return {
-        server: serverUrl,
-        username: username,
-        password: password,
-    };
-});
-
-const archiveDownloaderImageName = polkadotCluster.doRegistry.endpoint.apply(s => `${s}/polkadot-archive-downloader`);
-const nodeKeyConfiguratorImageName = polkadotCluster.doRegistry.endpoint.apply(s => `${s}/polkadot-node-key-configurator`);
-
-const archiveDownloaderImage = new docker.Image("polkadot-archive-downloader-img", {
-    imageName: archiveDownloaderImageName,
-    build: "polkadot-archive-downloader",
-    registry: registryInfo,
-});
-
-const nodeKeyConfiguratorImage = new docker.Image("polkadot-node-key-configurator-img", {
-    imageName: nodeKeyConfiguratorImageName,
-    build: "polkadot-node-key-configurator",
-    registry: registryInfo,
 });
 
 // Deploy helm charts on k8s cluster on DO
@@ -126,8 +78,8 @@ const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-va
             "polkadot_node": "parity/polkadot:v0.9.8",
         },
         "polkadot_k8s_images": {
-            "polkadot_archive_downloader": archiveDownloaderImageName,
-            "polkadot_node_key_configurator": nodeKeyConfiguratorImageName,
+            "polkadot_archive_downloader": "midl/polkadot_archive_downloader",
+            "polkadot_node_key_configurator": "midl/polkadot_node_key_configurator",
         },
         "polkadot_archive_url": "https://ksm-rocksdb.polkashots.io/snapshot",
         "chain": "kusama",
