@@ -18,17 +18,6 @@ const midlVPC = {
     region: "ams3",
 };
 
-const midlLoadBalancer = {
-    name: "midl-polakdot-lb",
-    region: "ams3",
-    forwardingRules: [{
-        entryPort: 31333,
-        entryProtocol: "tcp",
-        targetPort: 31333,
-        targetProtocol: "tcp",
-    }],
-};
-
 const midlKubernetes = {
     name: "midl-polkadot-k8s",
     version: "1.21.2-do.2",
@@ -46,50 +35,40 @@ const midlKubernetes = {
 const polkadotCluster = new docluster.MIDLCluster("midl-polkadot-cluster", {
     project: midlProject,
     vpc: midlVPC,
-    lb: midlLoadBalancer,
     k8s: midlKubernetes,
     description: "Cluster on digitalocean to host polkadot/ksm validators."
 });
 
-// Deploy helm charts on k8s cluster on DO
-// Declarations of validators.
-// Get Loadbalancer ip
-const lb = polkadotCluster.doLoadBalancer;
-const lbIP = lb.ip;
 // Get k8s config
 const kubecluster = polkadotCluster.doK8s;
 const kubeconfig = kubecluster.kubeConfigs[0].rawConfig;
 const provider = new kubernetes.Provider("do-k8s", { kubeconfig });
 
-// Polkadot validators
-const testValidatorNamespace = new kubernetes.core.v1.Namespace("test-validator-ns", {
+const promNS = new kubernetes.core.v1.Namespace("prometheus-ns", {
     metadata: {
-        name: "test-validator-ns",
+        name: "prometheus",
     }
 },{
     provider: provider,
     dependsOn: [provider, kubecluster]
 });
 
-const midlPolkaValidator01 = new kubernetes.helm.v3.Chart("midl-polkadot-test-validtor", {
-    path: "./charts/polkadot/",
-    values: {
-        "images": {
-            "polkadot_node": "parity/polkadot:v0.9.8",
-        },
-        "polkadot_k8s_images": {
-            "polkadot_archive_downloader": "midl/polkadot_archive_downloader",
-            "polkadot_node_key_configurator": "midl/polkadot_node_key_configurator",
-        },
-        "polkadot_archive_url": "https://ksm-rocksdb.polkashots.io/snapshot",
-        "chain": "kusama",
-        "polkadot_validator_name": "midl-polkadot-test-validtor",
-        "p2p_ip": lbIP,
-        "p2p_port": 31333
+const prometheus = new kubernetes.helm.v3.Chart("prometheus", {
+    chart: "prometheus",
+    fetchOpts:{
+        repo: "https://prometheus-community.github.io/helm-charts",
     },
-    // Intetegrated registry 401 error with new created ns
-    // namespace: testValidatorNamespace.metadata.name,
+    values: {
+        kubeStateMetrics: {
+            enabled: false,
+        },
+        nodeExporter: {
+            // enabled: true,
+            hostNetwork: false,
+        }
+    },
+    namespace: promNS.metadata.name
 },{
     provider: provider,
-    dependsOn: [testValidatorNamespace, provider, kubecluster],
+    dependsOn: [promNS, provider, kubecluster],
 });

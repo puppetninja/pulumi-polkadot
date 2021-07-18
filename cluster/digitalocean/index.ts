@@ -6,7 +6,6 @@ import { rootPulumiStackTypeName } from "@pulumi/pulumi/runtime";
 export interface ClusterParameters {
     project: ClusterProject;
     vpc: ClusterVPC;
-    lb: ClusterLoadBalancer;
     k8s: ClusterKubernetes;
     description: string;
 };
@@ -21,12 +20,6 @@ export interface ClusterProject {
 export interface ClusterVPC {
     name: string;
     region: string;
-};
-
-export interface ClusterLoadBalancer {
-    name: string;
-    region: string;
-    forwardingRules: Array<any>;
 };
 
 export interface ClusterKubernetesNodes {
@@ -54,13 +47,11 @@ export class MIDLCluster extends pulumi.ComponentResource {
     readonly name: string;
     readonly project: ClusterProject;
     readonly vpc: ClusterVPC;
-    readonly lb: ClusterLoadBalancer;
     readonly k8s: ClusterKubernetes;
     readonly description: string;
 
     // Provisioned resources on digitalocean
     readonly doVPC: digitalocean.Vpc;
-    readonly doLoadBalancer: digitalocean.LoadBalancer;
     readonly doK8s: digitalocean.KubernetesCluster;
 
     // constructor to provision resources on digitalocean
@@ -76,7 +67,6 @@ export class MIDLCluster extends pulumi.ComponentResource {
         this.name = name;
         this.project = params.project;
         this.vpc = params.vpc;
-        this.lb = params.lb;
         this.k8s = params.k8s;
         this.description = params.description;
         
@@ -103,24 +93,14 @@ export class MIDLCluster extends pulumi.ComponentResource {
             vpcUuid: this.doVPC.id,
         },{ dependsOn: [this.doVPC] });
 
-        // loadbalancer
-        this.doLoadBalancer = new digitalocean.LoadBalancer(this.lb.name, {
-            name: this.lb.name,
-            forwardingRules: this.lb.forwardingRules,
-            region: this.lb.region,
-            vpcUuid: this.doVPC.id,
-            dropletTag: "k8s:worker", // hardcoded k8s cluster nodes
-            algorithm: "least_connections",
-        },{ dependsOn: [this.doVPC, this.doK8s] });
 
         // Create project resources
         const projectResourcesName = this.project.name + "-resouces";
         const projectResources = new digitalocean.ProjectResources(projectResourcesName, {
             project: project.id,
             resources:[
-                this.doK8s.clusterUrn,
-                this.doLoadBalancer.loadBalancerUrn,
+                this.doK8s.clusterUrn
             ],
-        },{ dependsOn: [this.doK8s, this.doLoadBalancer] });
+        },{ dependsOn: [this.doK8s] });
     }
 };
