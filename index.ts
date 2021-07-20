@@ -4,6 +4,7 @@ import * as digitalocean from "@pulumi/digitalocean";
 import * as kubernetes from "@pulumi/kubernetes";
 
 import * as docluster from "./cluster/digitalocean";
+import { Project } from "@pulumi/digitalocean";
 
 // Define facts for the midl polkadot cluster.
 const midlProject = {
@@ -53,14 +54,35 @@ const promNS = new kubernetes.core.v1.Namespace("prometheus-ns", {
     dependsOn: [provider, kubecluster]
 });
 
-const prometheus = new kubernetes.helm.v3.Chart("prometheus", {
-    chart: "prometheus",
+const prometheus = new kubernetes.helm.v3.Chart("prometheus-stack", {
+    chart: "kube-prometheus-stack",
     fetchOpts:{
         repo: "https://prometheus-community.github.io/helm-charts",
     },
     values: {
-        kubeStateMetrics: {
-            enabled: false,
+        kubeApiServer: {
+            enabled: false
+        },
+        kubelet: {
+            enabled: false
+        },
+        kubeControllerManager: {
+            enabled: false
+        },
+        coreDns: {
+            enabled: false
+        },
+        kubeDns: {
+            enabled: true
+        },
+        kubeEtcd: {
+            enabled: false
+        },
+        kubeScheduler: {
+            enabled: false
+        },
+        kubeProxy: {
+            enabled: false
         },
         nodeExporter: {
             // enabled: true,
