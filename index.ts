@@ -54,6 +54,56 @@ const promNS = new kubernetes.core.v1.Namespace("prometheus-ns", {
     dependsOn: [provider, kubecluster]
 });
 
+const alertTitle = '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }} for {{ .CommonLabels.job }}'
+
+const alertText = `{{ range .Alerts -}}
+*Alert:* {{ .Annotations.title }}{{ if .Labels.severity }} - {{ .Labels.severity }}{{ end }}
+
+*Description:* {{ .Annotations.description }}
+
+*Details:*
+  {{ range .Labels.SortedPairs }} • *{{ .Name }}:* {{ .Value }}
+  {{ end }}
+{{ end }}
+`
+
+const alertmanagerConfig = {
+    global: {
+      slack_api_url: "TO BE FILLED",
+      resolve_timeout: '5m',
+    },
+    route: {
+      group_by: ['alertname', 'service'],
+      group_wait: '30s',
+      group_interval: '5m',
+      repeat_interval: '12h',
+      receiver: 'null',
+      routes: [
+        {
+            match: {
+                alertname: 'Watchdog',
+            },
+        }
+      ],
+    },
+    receivers: [
+        {
+            name: "null"
+        },{
+            name: 'midl_slack',
+            slack_configs: [
+                {
+                    channel: '#infra',
+                    send_resolved: true,
+                    icon_url: 'https://avatars3.githubusercontent.com/u/3380462',
+                    title: alertTitle,
+                    text: alertText,
+                }
+            ],
+        }
+    ]
+}
+
 const prometheus = new kubernetes.helm.v3.Chart("prometheus-stack", {
     chart: "kube-prometheus-stack",
     fetchOpts:{
@@ -87,7 +137,16 @@ const prometheus = new kubernetes.helm.v3.Chart("prometheus-stack", {
         nodeExporter: {
             // enabled: true,
             hostNetwork: false,
-        }
+        },
+        grafana: {
+            enabled: false,
+        },
+        alertmanager: {
+            config: alertmanagerConfig,
+            // alertmanagerSpec: {
+            //     logLevel: "debug",
+            // },
+        },
     },
     namespace: promNS.metadata.name
 },{
