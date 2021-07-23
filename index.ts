@@ -6,6 +6,16 @@ import * as kubernetes from "@pulumi/kubernetes";
 import * as docluster from "./cluster/digitalocean";
 import { Project } from "@pulumi/digitalocean";
 
+const getEnvVariable = (name: string): string => {
+    const env = process.env[name];
+    if (!env) {
+      pulumi.log.error(`${name} environment variable is not set`);
+      throw Error;
+    }
+    return env;
+    };
+
+
 // Define facts for the midl polkadot cluster.
 const midlProject = {
     name: "midl-polkadot",
@@ -54,6 +64,7 @@ const promNS = new kubernetes.core.v1.Namespace("prometheus-ns", {
     dependsOn: [provider, kubecluster]
 });
 
+const monitorNodePool = "midl-polkadot-nodes"
 const alertTitle = '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }} for {{ .CommonLabels.job }}'
 
 const alertText = `{{ range .Alerts -}}
@@ -69,7 +80,7 @@ const alertText = `{{ range .Alerts -}}
 
 const alertmanagerConfig = {
     global: {
-      slack_api_url: "TO BE FILLED",
+      slack_api_url: "https://hooks.slack.com/services/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",
       resolve_timeout: '5m',
     },
     route: {
@@ -138,15 +149,19 @@ const prometheus = new kubernetes.helm.v3.Chart("prometheus-stack", {
             // enabled: true,
             hostNetwork: false,
         },
-        grafana: {
-            enabled: false,
-        },
         alertmanager: {
             config: alertmanagerConfig,
-            // alertmanagerSpec: {
-            //     logLevel: "debug",
-            // },
+            alertmanagerSpec: {
+                nodeSelector: {
+                    "doks.digitalocean.com/node-pool": monitorNodePool
+                }
+            },
         },
+        prometheusOperator: {
+            nodeSelector: {
+                "doks.digitalocean.com/node-pool": monitorNodePool
+            }
+        }
     },
     namespace: promNS.metadata.name
 },{
