@@ -80,7 +80,7 @@ const alertText = `{{ range .Alerts -}}
 
 const alertmanagerConfig = {
     global: {
-      slack_api_url: "https://hooks.slack.com/services/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",
+      slack_api_url: "TOBEFILLED",
       resolve_timeout: '5m',
     },
     route: {
