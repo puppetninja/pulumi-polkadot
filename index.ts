@@ -15,6 +15,7 @@ const getEnvVariable = (name: string): string => {
     return env;
     };
 
+const slackApiURL = getEnvVariable('SLACK_API_URL');
 
 // Define facts for the midl polkadot cluster.
 const midlProject = {
@@ -77,10 +78,13 @@ const alertText = `{{ range .Alerts -}}
   {{ end }}
 {{ end }}
 `
+const nodeSelectorSpec = {
+    "doks.digitalocean.com/node-pool": monitorNodePool
+}
 
 const alertmanagerConfig = {
     global: {
-      slack_api_url: "TOBEFILLED",
+      slack_api_url: `${slackApiURL}`,
       resolve_timeout: '5m',
     },
     route: {
@@ -152,15 +156,11 @@ const prometheus = new kubernetes.helm.v3.Chart("prometheus-stack", {
         alertmanager: {
             config: alertmanagerConfig,
             alertmanagerSpec: {
-                nodeSelector: {
-                    "doks.digitalocean.com/node-pool": monitorNodePool
-                }
+                nodeSelector: nodeSelectorSpec
             },
         },
         prometheusOperator: {
-            nodeSelector: {
-                "doks.digitalocean.com/node-pool": monitorNodePool
-            }
+            nodeSelector: nodeSelectorSpec
         }
     },
     namespace: promNS.metadata.name
