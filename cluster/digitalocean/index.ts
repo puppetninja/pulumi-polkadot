@@ -7,6 +7,7 @@ export interface ClusterParameters {
     project: ClusterProject;
     vpc: ClusterVPC;
     k8s: ClusterKubernetes;
+    doToken: string;
     description: string;
 };
 
@@ -49,10 +50,12 @@ export class MIDLCluster extends pulumi.ComponentResource {
     readonly vpc: ClusterVPC;
     readonly k8s: ClusterKubernetes;
     readonly description: string;
+    readonly doToken: string;
 
     // Provisioned resources on digitalocean
     readonly doVPC: digitalocean.Vpc;
     readonly doK8s: digitalocean.KubernetesCluster;
+    readonly doKubeconfig: pulumi.Output<string>;
 
     // constructor to provision resources on digitalocean
     constructor(name: string,
@@ -69,6 +72,7 @@ export class MIDLCluster extends pulumi.ComponentResource {
         this.vpc = params.vpc;
         this.k8s = params.k8s;
         this.description = params.description;
+        this.doToken = params.doToken;
         
         // project
         const project = new digitalocean.Project(this.project.name, {
@@ -93,6 +97,28 @@ export class MIDLCluster extends pulumi.ComponentResource {
             vpcUuid: this.doVPC.id,
         },{ dependsOn: [this.doVPC] });
 
+        // The kubeconfig passed by the API expires 7 days after cluster creation
+        // To go around the problem, we create our own kubeconfig
+        // This trick was found here:
+        // https://github.com/pulumi/pulumi-digitalocean/issues/78
+        this.doKubeconfig = pulumi.interpolate`apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: ${this.doK8s.kubeConfigs[0].clusterCaCertificate}
+    server: ${this.doK8s.endpoint}
+  name: ${this.doK8s.name}
+contexts:
+- context:
+    cluster: ${this.doK8s.name}
+    user: ${this.doK8s.name}-admin
+  name: ${this.doK8s.name}
+current-context: ${this.doK8s.name}
+kind: Config
+users:
+- name: ${this.doK8s.name}-admin
+  user:
+    token: ${this.doToken}
+`;
 
         // Create project resources
         const projectResourcesName = this.project.name + "-resouces";

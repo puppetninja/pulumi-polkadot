@@ -16,6 +16,7 @@ const getEnvVariable = (name: string): string => {
     };
 
 const slackApiURL = getEnvVariable('SLACK_API_URL');
+const doToken = getEnvVariable('DIGITALOCEAN_TOKEN');
 
 // Define facts for the midl polkadot cluster.
 const midlProject = {
@@ -48,26 +49,19 @@ const polkadotCluster = new docluster.MIDLCluster("midl-polkadot-cluster", {
     project: midlProject,
     vpc: midlVPC,
     k8s: midlKubernetes,
+    doToken: doToken,
     description: "Cluster on digitalocean to host polkadot/ksm validators."
 });
 
 // Get k8s config
 const kubecluster = polkadotCluster.doK8s;
-const kubeconfig = kubecluster.kubeConfigs[0].rawConfig;
+const kubeconfig = polkadotCluster.doKubeconfig;
 const provider = new kubernetes.Provider("do-k8s", { kubeconfig });
 
-const promNS = new kubernetes.core.v1.Namespace("prometheus-ns", {
-    metadata: {
-        name: "prometheus",
-    }
-},{
-    provider: provider,
-    dependsOn: [provider, kubecluster]
-});
-
-const monitorNodePool = "midl-polkadot-nodes"
+//////////////
+// Monitoring
+/////////////
 const alertTitle = '[{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .CommonLabels.alertname }} for {{ .CommonLabels.job }}'
-
 const alertText = `{{ range .Alerts -}}
 *Alert:* {{ .Annotations.title }}{{ if .Labels.severity }} - {{ .Labels.severity }}{{ end }}
 
@@ -78,10 +72,6 @@ const alertText = `{{ range .Alerts -}}
   {{ end }}
 {{ end }}
 `
-const nodeSelectorSpec = {
-    "doks.digitalocean.com/node-pool": monitorNodePool
-}
-
 const alertmanagerConfig = {
     global: {
       slack_api_url: `${slackApiURL}`,
@@ -119,7 +109,21 @@ const alertmanagerConfig = {
     ]
 }
 
-const prometheus = new kubernetes.helm.v3.Chart("prometheus-stack", {
+const monitorNodePool = "midl-polkadot-nodes"
+const monitorNodeSelectorSpec = {
+    "doks.digitalocean.com/node-pool": monitorNodePool
+}
+
+const monitorNamespace = new kubernetes.core.v1.Namespace("monitoring", {
+    metadata: {
+        name: "monitoring",
+    }
+},{
+    provider: provider,
+    dependsOn: [provider, kubecluster]
+});
+
+const monitorStack = new kubernetes.helm.v3.Chart("monitoring", {
     chart: "kube-prometheus-stack",
     fetchOpts:{
         repo: "https://prometheus-community.github.io/helm-charts",
@@ -156,15 +160,15 @@ const prometheus = new kubernetes.helm.v3.Chart("prometheus-stack", {
         alertmanager: {
             config: alertmanagerConfig,
             alertmanagerSpec: {
-                nodeSelector: nodeSelectorSpec
+                nodeSelector: monitorNodeSelectorSpec
             },
         },
         prometheusOperator: {
-            nodeSelector: nodeSelectorSpec
+            nodeSelector: monitorNodeSelectorSpec
         }
     },
-    namespace: promNS.metadata.name
+    namespace: monitorNamespace.metadata.name
 },{
     provider: provider,
-    dependsOn: [promNS, provider, kubecluster],
+    dependsOn: [monitorNamespace, provider, kubecluster],
 });
